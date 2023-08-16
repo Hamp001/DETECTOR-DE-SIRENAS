@@ -1,0 +1,18 @@
+function ButtonA () {
+    input.onButtonPressed(Button.A, function () {
+        basic.showArrow(ArrowNames.West);
+        basic.pause(2000);
+        basic.clearScreen();
+    });
+return true
+}
+function ButtonB () {
+    input.onButtonPressed(Button.B, function () {
+        basic.showArrow(ArrowNames.East);
+        basic.pause(2000);
+        basic.clearScreen();
+    });
+return true
+}
+ButtonA()
+ButtonB()
