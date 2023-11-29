@@ -1,11 +1,10 @@
-
 #include "arduinoFFT.h"
 #include <iostream>
-#include "enumerate.h"
 #include <regex>
 #include <vector>
 #include <string>
-#define SAMPLES 1024
+#include <ESP8266WiFi.h>
+#define SAMPLES 256//256
 #define SAMPLING_FREQUENCY 10000
 
 arduinoFFT FFT = arduinoFFT();
@@ -19,11 +18,11 @@ unsigned long newTime, oldTime;
  seguidas de al menos 2 "A" en cualquier parte del string.*/
 std::regex hi_lo("A{2,}B{2,}|B{2,}A{2,}", std::regex_constants::ECMAScript | std::regex_constants::icase);
 std::vector<float>  signals;
-std::vector<std::string> tonos;
+
 float FA_MIN=700;//700
 float FA_MAX=1500;//1500
 float FB_MIN=200;//200
-float FB_MAX=600;//600
+float FB_MAX=650;//600
 
 void setup() {
   Serial.begin(115200);
@@ -45,12 +44,9 @@ void loop() {
   FFT.ComplexToMagnitude(vReal, vImag, SAMPLES);
   
   for (int i = 2; i < (SAMPLES / 2); i++) {
-    if (vReal[i] > 175) {
-      Serial.print("Frequency: ");
-      Serial.print(i * (SAMPLING_FREQUENCY / SAMPLES));
-      Serial.print(" Hz, Amplitude: ");
-      Serial.println(vReal[i]);
-      //detectar si el frame de 20 señales tiene una sirena 
+    if (vReal[i]>200) {//60
+      std::cout<<"Frecuencia:"<<i * (SAMPLING_FREQUENCY / SAMPLES)<<" Hz, amplitud: "<<vReal[i]<<std::endl;
+      //detectar si el frame de 20 tonos tiene una sirena 
       if(signals.size()==20){
         detectSiren(signals);
         signals.clear();
@@ -60,39 +56,29 @@ void loop() {
       }
     }
   }
-
+  
 }
 void detectSiren(std::vector<float>signals){
   if(regex_search(get_hilo(signals),hi_lo)){
     digitalWrite(2,LOW);
-    std::cout<<"Sirena detectada"<<get_hilo(signals)<<std::endl;
+    std::cout<<"Sirena detectada "<<get_hilo(signals)<<std::endl;
     delay(5000);
+    digitalWrite(2,HIGH);
+    ESP.restart();// evitar lecturas incorrectas de frecuencias 
   }else{
     digitalWrite(2,HIGH);
-    std::cout<<"no detectada"<<get_hilo(signals)<<std::endl;
+    std::cout<<"no detectada "<<get_hilo(signals)<<std::endl;
   }
 }
+bool isFa(float freq) {return (FA_MIN <= freq && freq <= FA_MAX);}
+bool isFb(float freq) {return (FB_MIN <= freq && freq <= FB_MAX);}
 
-bool isFa(float freq){
-  if(FA_MIN <= freq && freq <= FA_MAX)
-    return true;
-  else
-    return false;
-}
-bool isFb(float freq){
-  if(FB_MIN <= freq && freq <= FB_MAX)
-    return true;
-  else
-    return false;
-}
 std::string get_hilo(std::vector<float> freqs){
   std::string patron="";
   for(float freq: freqs){
-    //std::cout<<freq<<std::endl;
     if(isFa(freq)) patron+="A";
     else if(isFb(freq)) patron+="B";
     else patron+="-";
-    //std::cout<<patron<<std::endl;
   }
   return patron;
 }
